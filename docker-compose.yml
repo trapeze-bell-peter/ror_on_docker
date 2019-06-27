@@ -1,0 +1,51 @@
+version: '3.7'
+
+services:
+  db:
+    image: postgres:latest
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'postgres'
+    volumes:
+      - database_data:/var/lib/postgresql/data
+
+  sidekiq:
+    build:
+      context: .
+      dockerfile: sidekiq.dockerfile
+    command: bundle exec sidekiq -v
+    links:
+      - sidekiq-cache
+      - rails-cache
+    volumes:
+      - '.:/app'
+
+  sidekiq-cache:
+    image: redis
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - 6379:6379
+    volumes:
+      - ./sidekiq.conf:/usr/local/etc/redis/redis.conf
+
+  rails-cache:
+    image: redis
+    command: redis-server /usr/local/etc/redis/redis.conf
+    ports:
+      - 6380:6380
+    volumes:
+      - ./rails-cache.conf:/usr/local/etc/redis/redis.conf
+
+  mailcatcher:
+    image: zolweb/docker-mailcatcher:latest
+    ports:
+      - "1025:1025"
+      - "1080:1080"
+
+volumes:
+  database_data:
+    driver: local
+

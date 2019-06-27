@@ -1,0 +1,16 @@
+default: &default
+  adapter: postgresql
+  encoding: unicode
+  pool: 10
+  username: postgres
+  password: postgres
+
+development:
+  <<: *default
+  url: postgres://0.0.0.0/
+  database: <%= "#{`git symbolic-ref --short HEAD`.strip.underscore}_development" %>
+
+test:
+  <<: *default
+  url: postgres://0.0.0.0/
+  database: <%= "#{`git symbolic-ref --short HEAD`.strip.underscore}_test" %>
