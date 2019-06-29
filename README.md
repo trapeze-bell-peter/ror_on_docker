@@ -114,6 +114,22 @@ development, the best approach is to dump an operational database and import it 
 # psql -U postgres -h 0.0.0.0 app_development < db/expenses.dump
 ```
 
+If you need to look at what is happening inside the database, you can use the following command to launch a SQL
+interactive session:
+
+```bash
+# psql -U postgres -h 0.0.0.0 app_development
+```
+
+This will prompt you for your password which is `postgres` as defined in the `docker-compose.yaml` file. I find it very
+useful to configure PGPASSWORD in my environment to avoid having to constantly re-enter the password.  You can set this
+anyway you set environment variables.  Personally, I have set it in my `.bashrc` file:
+
+```bash
+export PGPASSWORD=postgres
+```
+
+
 For test, it is best to load the schema into the database, but leave the database largely empty:
 
 ```bash
@@ -235,9 +251,31 @@ Sidekiq.configure_client do |config|
 end
 ```
 
+Rebuild the docker containers with:
+
+```bash
+# docker-compose up --build
+```
+
 # Mailcatcher
 
+I find it very useful in Development to use the [mailcatcher](https://github.com/sj26/mailcatcher) in development to make
+sure that the mail aspects of the application are working.  Again, we can run this in its own container.  Simply add
+this to the services section of the yaml file:
 
+```yaml
+  mailcatcher:
+    image: zolweb/docker-mailcatcher:latest
+    ports:
+      - "1025:1025"
+      - "1080:1080"
+```
+
+Configuration in the config/environments/development.rb file:
+
+```ruby
+
+```
 
 Rebuild the docker containers with:
 
@@ -246,7 +284,5 @@ Rebuild the docker containers with:
 ```
 
 
-```bash
-# psql -U postgres -h 0.0.0.0 app_development
-```
+
 
