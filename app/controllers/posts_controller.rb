@@ -63,14 +63,27 @@ class PostsController < ApplicationController
     end
   end
 
-  private
-    # Use callbacks to share common setup or constraints between actions.
-    def set_post
-      @post = Post.find(params[:id])
-    end
+  def do_word_count
+    respond_to :html
 
-    # Never trust parameters from the scary internet, only allow the white list through.
-    def post_params
-      params.require(:post).permit(:content, :user_id)
-    end
+    WordCountJob.perform_now
+    sleep(10)
+    redirect_to show_word_count_posts_url, notice: 'Word count job started.'
+  end
+
+  def show_word_count
+    @word_counts = Rails.cache.read('word_counts')
+  end
+
+  private
+
+  # Use callbacks to share common setup or constraints between actions.
+  def set_post
+    @post = Post.find(params[:id])
+  end
+
+  # Never trust parameters from the scary internet, only allow the white list through.
+  def post_params
+    params.require(:post).permit(:content, :user_id)
+  end
 end
