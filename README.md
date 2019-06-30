@@ -35,9 +35,20 @@ gives us the best of both world: we can use Rubymine, rvm and bundler to ensure 
 for developers working on the same branch, while allowing us to run different databases associated with different
 branches.
 
+This article and associated Git repository shows how I have solved the problem.
+
 # The toy problem
 
-The 
+The associated Git repository contains the various files here, together with a toy application that uses the concepts
+described here to run.  In common with Ruby-on-Rails convention (over configuration), the toy problem is an
+ultra-simplistic bulletin board.  Users of the bulletin board can:
+
+* View, edit and delete users and posts (standard CRUD).
+* Create new posts.  When a user creates a new post, they receive an email thanking them.
+* Request a word count across all posts.  This uses an ActiveJob based on Sidekiq to do the calculation.  After 10
+  seconds, the controller will redirect the user to a page that should show the word counts as retrieved from the
+  Rails cache.  Another 10 seconds later the Rails cache entry is deleted.
+
 # Setting up Docker and Docker-compose
 
 Digital Ocean have a good description of how to install Docker on Ubuntu
@@ -380,9 +391,10 @@ done
 Both scripts can fail and Git will report if they do.  The main failure mode is if the database we are copying from does
 not exist.
 
-# Things I would still like to do
+# Final thoughts 
 
 Overall, this works well.  I have moved most of my RoR projects on my local machine over to using `docker-compose`.
+
 My biggest gripe is that I can end up with a docker-compose container running in another project and blocking a key
 port.  It would be nice if I could define different subdomains for each project so that does not arise anymore.
 

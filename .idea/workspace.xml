@@ -3,7 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="98acee1d-6d46-4979-80bd-3efc2e856851" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/environments/development.rb" beforeDir="false" afterPath="$PROJECT_DIR$/config/environments/development.rb" afterDir="false" />
     </list>
     <ignored path="$PROJECT_DIR$/.bundle/" />
     <ignored path="$PROJECT_DIR$/components/" />
@@ -50,8 +49,8 @@
         <entry file="file://$PROJECT_DIR$/README.md">
           <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
             <state split_layout="SPLIT">
-              <first_editor relative-caret-position="5533">
-                <caret line="388" column="35" selection-start-line="388" selection-start-column="35" selection-end-line="388" selection-end-column="35" />
+              <first_editor relative-caret-position="4373">
+                <caret line="395" selection-start-line="395" selection-end-line="395" />
               </first_editor>
               <second_editor />
             </state>
@@ -164,6 +163,17 @@
             <path>
               <item name="ror_on_docker" type="3d21c010:ScopeViewTreeModel$ProjectNode" />
               <item name="~/RubymineProjects/ror_on_docker" type="442cc68d:ScopeViewTreeModel$RootNode" />
+            </path>
+            <path>
+              <item name="ror_on_docker" type="3d21c010:ScopeViewTreeModel$ProjectNode" />
+              <item name="~/RubymineProjects/ror_on_docker" type="442cc68d:ScopeViewTreeModel$RootNode" />
+              <item name="app" type="9f88c78c:ScopeViewTreeModel$FileNode" />
+            </path>
+            <path>
+              <item name="ror_on_docker" type="3d21c010:ScopeViewTreeModel$ProjectNode" />
+              <item name="~/RubymineProjects/ror_on_docker" type="442cc68d:ScopeViewTreeModel$RootNode" />
+              <item name="app" type="9f88c78c:ScopeViewTreeModel$FileNode" />
+              <item name="models" type="9f88c78c:ScopeViewTreeModel$FileNode" />
             </path>
             <path>
               <item name="ror_on_docker" type="3d21c010:ScopeViewTreeModel$ProjectNode" />
@@ -439,18 +449,17 @@
       <workItem from="1561789499632" duration="4165000" />
       <workItem from="1561806921138" duration="1520000" />
       <workItem from="1561823474302" duration="4939000" />
-      <workItem from="1561868001131" duration="9136000" />
+      <workItem from="1561868001131" duration="9979000" />
     </task>
     <servers />
   </component>
   <component name="TimeTrackingManager">
-    <option name="totallyTimeSpent" value="39615000" />
+    <option name="totallyTimeSpent" value="40458000" />
   </component>
   <component name="ToolWindowManager">
     <frame x="120" y="42" width="3720" height="2118" extended-state="6" />
-    <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" sideWeight="0.49921507" weight="0.2093664" />
+      <window_info active="true" content_ui="combo" id="Project" order="0" sideWeight="0.49921507" visible="true" weight="0.2093664" />
       <window_info id="Structure" order="1" sideWeight="0.50078493" side_tool="true" weight="0.20688705" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info id="Learn" order="3" />
@@ -690,8 +699,8 @@
       <provider editor-type-id="text-editor" />
       <provider selected="true" editor-type-id="split-provider[text-editor;markdown-preview-editor]">
         <state split_layout="SPLIT">
-          <first_editor relative-caret-position="5533">
-            <caret line="388" column="35" selection-start-line="388" selection-start-column="35" selection-end-line="388" selection-end-column="35" />
+          <first_editor relative-caret-position="4373">
+            <caret line="395" selection-start-line="395" selection-end-line="395" />
           </first_editor>
           <second_editor />
         </state>
