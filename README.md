@@ -35,6 +35,9 @@ gives us the best of both world: we can use Rubymine, rvm and bundler to ensure 
 for developers working on the same branch, while allowing us to run different databases associated with different
 branches.
 
+# The toy problem
+
+The 
 # Setting up Docker and Docker-compose
 
 Digital Ocean have a good description of how to install Docker on Ubuntu
@@ -259,7 +262,7 @@ Rebuild the docker containers with:
 
 # Mailcatcher
 
-I find it very useful in Development to use the [mailcatcher](https://github.com/sj26/mailcatcher) in development to make
+I find it very useful to use the [mailcatcher](https://github.com/sj26/mailcatcher) in development to make
 sure that the mail aspects of the application are working.  Again, we can run this in its own container.  Simply add
 this to the services section of the yaml file:
 
@@ -274,7 +277,10 @@ this to the services section of the yaml file:
 Configuration in the config/environments/development.rb file:
 
 ```ruby
-
+  # Don't care if the mailer can't send.
+  config.action_mailer.delivery_method = :smtp
+  config.action_mailer.smtp_settings = { address: '0.0.0.0', port: 1025 }
+  config.action_mailer.raise_delivery_errors = false
 ```
 
 Rebuild the docker containers with:
@@ -283,6 +289,102 @@ Rebuild the docker containers with:
 # docker-compose up --build
 ```
 
+# Git hooks
 
+When branching in development, the developer could of course either run `db:create` to create a new database, or
+manually copy from an existing database associated with another branch.  However, I felt it would be advantageous
+to provide suitable Git hooks that do this automatically.  Likewise, it would be good to remove development and
+test databases for which the corresponding local branch no longer exists.
 
+Git provides an in-built mechanism in the form of a director `.git/hooks`.  In this, the user can store scripts to
+be run at suitable points. Unfortunately, its not perfect since the hooks are not directly associated with branching or
+deleting a branch.  Instead, they are associated with checkout and merging.
 
+To this end, I have created two bash scripts that reside in the `bin` directory:
+
+* `bin/copy-db-to-new-branch.sh`
+* `bin/drop-dbs-not-on-branch.sh`
+
+I decided, however, to create these as standard bash scripts in the `bin` directory instead. There were two reasons
+to put them in the bin directory rather than straight in Git's `hooks` directory:
+
+* By being in the bin directory, they are under version control in the same way as any other project file.
+* They can be invoked directly by the user from the command line if necessary.
+
+So that Git can use them, we do require to setup two symbolic links from `hooks` to the the `bin` directory:
+
+```bash
+$ cd .git/hooks
+$ ln -s post-checkout ../../bin/copy-db-to-new-branch.sh
+$ ln -s ../../bin/drop-dbs-not-on-branch.sh post-merge
+
+```
+  
+I should make clear that I am neither a Git nor a Bash scripting expert, so there may be better ways of doing this.  But
+it does seem to work.  Here is `copy-db-to-new-branch.sh`:
+
+```bash
+#!/bin/bash
+
+BRANCHING=$3
+
+if [[ $BRANCHING == '1' ]]; then
+    OLD_BRANCH_NAME=$(git reflog | awk 'NR==1{ print $6; exit }')
+    NEW_BRANCH_NAME=$(git reflog | awk 'NR==1{ print $8; exit }')
+
+    TARGET_DATABASE=${NEW_BRANCH_NAME}_development
+    TARGET_DATABASE_EXISTS=`psql -qAtX -U postgres -h 0.0.0.0 postgres -c "SELECT COUNT(*) FROM pg_database WHERE datname='${TARGET_DATABASE}';"`
+
+    if [[ $TARGET_DATABASE_EXISTS=='0' ]]; then
+        createdb -h 0.0.0.0 -U postgres -T ${OLD_BRANCH_NAME}_development ${TARGET_DATABASE}
+    fi
+fi
+``` 
+
+Here is the corresponding `drop-dbs-not-on-brach.sh`:
+
+```bash
+#!/bin/bash
+
+# Post merge hook to iterate over all databases user databases ending in _development or _test and check if they
+# still have a branch associated with them.  If they don't then remove.
+
+mapfile -t DATABASE_ARRAY < <( psql -qAtX -U postgres -h 0.0.0.0 postgres -c 'SELECT datname FROM pg_database;' )
+mapfile -t GIT_BRANCHES < <( git branch --format='%(refname:short)' )
+
+# Check if we can match the database passed as a param with a branch.  If not, drop the DB.
+function drop_if_no_branch {
+    local db=$1
+
+    for GIT_BRANCH in "${GIT_BRANCHES[@]}"
+    do
+        if [[ $1 == "${GIT_BRANCH}_development" || $1 == "${GIT_BRANCH}_test" ]]; then
+            return 0
+        fi
+    done
+
+    dropdb -U postgres -h 0.0.0.0 $db
+}
+
+# Iterate through the array of databases.  Remove any DB for which there is no corresponding branch.  Don't include
+# any DBs that end in _development or _test.
+for DATABASE in ${DATABASE_ARRAY[@]}; do
+    case $DATABASE in
+        postgres | template0 | template1 ) ;;
+        *_development) drop_if_no_branch $DATABASE ;;
+        *_test) drop_if_no_branch $DATABASE ;;
+    esac
+done
+```
+
+Both scripts can fail and Git will report if they do.  The main failure mode is if the database we are copying from does
+not exist.
+
+# Things I would still like to do
+
+Overall, this works well.  I have moved most of my RoR projects on my local machine over to using `docker-compose`.
+My biggest gripe is that I can end up with a docker-compose container running in another project and blocking a key
+port.  It would be nice if I could define different subdomains for each project so that does not arise anymore.
+
+I would also love to write a Rails generator that does all this setup automatically.  But that is a bigger undertaking and
+therefore for another day.
