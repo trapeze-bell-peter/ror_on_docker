@@ -96,14 +96,17 @@ default: &default
 
 development:
   <<: *default
-  url: postgres://0.0.0.0/
+  url: <%= ENV['POSTGRES_URL'] || 'postgres://0.0.0.0/' %>
   database: <%= "#{`git symbolic-ref --short HEAD`.strip.underscore}_development" %>
 
 test:
   <<: *default
-  url: postgres://0.0.0.0/
+  url: <%= ENV['POSTGRES_URL'] || 'postgres://0.0.0.0/' %>
   database: <%= "#{`git symbolic-ref --short HEAD`.strip.underscore}_test" %>
 ```
+
+Note the us of the `POSTGRES_URL` environment variable.  We will need this later when we get a Sidekiq instance
+talking to the database from within the `docker-compose` system.
 
 If you have a local Postgres instance that is started as a service during boot-up, disable it now.  Otherwise, docker will fail to bind to the Postgres port as it is already taken. To instantiate everything, simply run:
 
@@ -232,7 +235,10 @@ With that in place, we can now add the descriptions of the two containers to the
       context: .
       dockerfile: sidekiq.dockerfile
     command: bundle exec sidekiq -v
+    environment:
+      POSTGRES_URL: 'postgres://db/'
     links:
+      - db
       - sidekiq-cache
       - rails-cache
     volumes:
@@ -326,7 +332,7 @@ So that Git can use them, we do require to setup two symbolic links from `hooks`
 
 ```bash
 $ cd .git/hooks
-$ ln -s post-checkout ../../bin/copy-db-to-new-branch.sh
+$ ln -s ../../bin/copy-db-to-new-branch.sh post-checkout 
 $ ln -s ../../bin/drop-dbs-not-on-branch.sh post-merge
 
 ```
