@@ -173,6 +173,15 @@ in the service section of your `docker-compose.yaml` file.
       - ./rails-cache.conf:/usr/local/etc/redis/redis.conf
 ```
 
+We also need to change the way we configure the Redis store to act as a Rails cache:
+
+```Ruby
+  # Use Redis as our cache store.
+  config.cache_store = :redis_cache_store, { url: ENV['RAILS_CACHE_URL'] || 'redis://0.0.0.0:6380' }
+```
+
+This ensures that when Sidekiq uses the Rails cache it uses the correct URL
+
 This will create a Redis instance in Docker exposing port 6380 to the outside world.  It uses a redis config file
 located in the project's top level directory to configure the Redis instance.  This file is very standard, but with one
 key difference:
@@ -237,6 +246,7 @@ With that in place, we can now add the descriptions of the two containers to the
     command: bundle exec sidekiq -v
     environment:
       POSTGRES_URL: 'postgres://db/'
+      RAILS_CACHE_URL: 'redis://rails-cache:6380/'
     links:
       - db
       - sidekiq-cache

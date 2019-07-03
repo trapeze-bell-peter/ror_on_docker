@@ -16,7 +16,7 @@ Rails.application.configure do
   config.active_job.queue_adapter = :sidekiq
 
   # Use Redis as our cache store.
-  config.cache_store = :redis_cache_store, { url: 'redis://0.0.0.0:6380' }
+  config.cache_store = :redis_cache_store, { url: ENV['RAILS_CACHE_URL'] || 'redis://0.0.0.0:6380' }
 
   # Store uploaded files on the local file system (see config/storage.yml for options)
   config.active_storage.service = :local

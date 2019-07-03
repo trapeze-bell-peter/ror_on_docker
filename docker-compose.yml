@@ -19,6 +19,7 @@ services:
     command: bundle exec sidekiq -v
     environment:
       POSTGRES_URL: 'postgres://db/'
+      RAILS_CACHE_URL: 'redis://rails-cache:6380/'
     links:
       - db
       - sidekiq-cache
