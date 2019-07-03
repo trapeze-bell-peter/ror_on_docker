@@ -24,7 +24,7 @@ function drop_if_no_branch {
 # any DBs that end in _development or _test.
 for DATABASE in ${DATABASE_ARRAY[@]}; do
     case $DATABASE in
-        postgres | template0 | template1 ) ;;
+        postgres | template0 | template1 | master_development | master_test ) ;;
         *_development) drop_if_no_branch $DATABASE ;;
         *_test) drop_if_no_branch $DATABASE ;;
     esac
