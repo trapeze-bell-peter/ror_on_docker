@@ -1,6 +1,6 @@
 #!/bin/bash
 
-NEW_BRANCH_NAME=$(git reflog | awk 'NR==1{ print $8; exit }')
+NEW_BRANCH_NAME=$(git symbolic-ref --short HEAD)
 
 # Don't bother copying the master_branch onto itself.
 if [[ $NEW_BRANCH_NAME=='master_developmet' ]]; then

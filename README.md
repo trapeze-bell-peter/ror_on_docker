@@ -3,20 +3,16 @@
 There are many good guides on how to setup docker-composer to run `Ruby-on-Rails`. 
 [Here](https://www.firehydrant.io/blog/developing-a-ruby-on-rails-app-with-docker-compose/) is one of the better
 ones.  The most cited reasons for using `docker` and `docker-compose`: ensuring that everyone has a consistent
-development environment.
-
-However, IMHO, most of these miss the point.  The key challenge is making it easy for developers to switch between
-different branches of the application rather than ensuring consistency - Ruby with its tools already does a good job on
-consistency.  Reasons why branches could be inconsistent:
+development environment.  Reasons cited as to why branches could be inconsistent:
 
 1. different run-time environment
 2. different Ruby or Ruby-on-Rails versions
 3. using different Gems
 4. database structure may be changing as a new feature is being added
 
-In my view, the first three items are not an issue.  Ruby does a good job of abstracting away from the operating system.
-Additionally,  `rvm`, `gem` and `bundler` between them do a good job of ensuring that everyone is using a consistent
-underlying library of Ruby code.
+My reasons for wanting to use Docker really focuses on the fourth point.  I believe that Ruby, when used with `rvm`,
+`gem` and `bundler` between them do a good job of ensuring that everyone is using a consistent underlying library of
+Ruby code and Ruby Gems.
 
 The big issue really arises around database structure and managing consistent deployment.  Typically, we might have a
 single Postgres instance running on the development machine.  As we start each new project, we need to create a new
@@ -33,14 +29,18 @@ and so on.  I could easily loose one to two hours in the switch and switch back.
 `docker-compose` gives us a way of having different database instances running on the same development machine.  This
 gives us the best of both world: we can use Rubymine, rvm and bundler to ensure that the Ruby environment is consistent
 for developers working on the same branch, while allowing us to run different databases associated with different
-branches.
+branches.  Because we are still running the application locally, our usual tool chain, particularly in Rubymine, works
+fine with no tweaking.
 
-This article and associated Git repository shows how I have solved the problem.
+This article and associated Git repository shows how I have started using Docker-compose to have different setups within
+the same development directory structure.  Switching between different development branches, particularly when the
+database schema is evolving is more straightforward.  However, as I explain at to the end of the article its not a
+panacea.
 
 # The toy problem
 
 The associated Git repository contains the various files here, together with a toy application that uses the concepts
-described here to run.  In common with Ruby-on-Rails convention (over configuration), the toy problem is an
+described here to run.  In common with Ruby-on-Rails convention (almost over configuration), the toy problem is an
 ultra-simplistic bulletin board.  Users of the bulletin board can:
 
 * View, edit and delete users and posts (standard CRUD).
@@ -108,14 +108,15 @@ test:
 Note the us of the `POSTGRES_URL` environment variable.  We will need this later when we get a Sidekiq instance
 talking to the database from within the `docker-compose` system.
 
-If you have a local Postgres instance that is started as a service during boot-up, disable it now.  Otherwise, docker will fail to bind to the Postgres port as it is already taken. To instantiate everything, simply run:
+If you have a local Postgres instance that is started as a service during boot-up, disable it now.  Otherwise, docker
+will fail to bind to the Postgres port as it is already taken. To instantiate everything, simply run:
 
 ```bash
 # docker-compose up --build
 ```
 
 Docker should report that it has successfully created the containers and started the postgres instance tied to the
-standard Postgres port of 5432.  Note, that the configuration  is setup so that it will create a database named
+standard Postgres port of 5432.  Note, that the configuration is setup so that it will create a database named
 _git_branch_name_\_development.
 
 Once this has been setup, we can use standard rails to create a database:
@@ -150,8 +151,8 @@ export PGPASSWORD=postgres
 For test, it is best to load the schema into the database, but leave the database largely empty:
 
 ```bash
-# rails db:schema:load ENV=test
-# rails db:seed ENV=test
+# rails db:schema:load RAILS_ENV=test
+# rails db:seed RAILS_ENV=test
 ```
 
 You should now be able to use your Rails app as normal with the main app running locally, while database actions are
@@ -327,13 +328,13 @@ Git provides an in-built mechanism in the form of a director `.git/hooks`.  In t
 be run at suitable points. Unfortunately, its not perfect since the hooks are not directly associated with branching or
 deleting a branch.  Instead, they are associated with checkout and merging.
 
-To this end, I have created two bash scripts that reside in the `bin` directory:
+To this end, I have created three bash scripts that reside in the `bin` directory:
 
 * `bin/copy-db-to-new-branch.sh`
 * `bin/drop-dbs-not-on-branch.sh`
+* `bin/ls-dbs.sh`
 
-I decided, however, to create these as standard bash scripts in the `bin` directory instead. There were two reasons
-to put them in the bin directory rather than straight in Git's `hooks` directory:
+There were two reasons to put them in the bin directory rather than straight in Git's `hooks` directory:
 
 * By being in the bin directory, they are under version control in the same way as any other project file.
 * They can be invoked directly by the user from the command line if necessary.
@@ -353,20 +354,25 @@ it does seem to work.  Here is `copy-db-to-new-branch.sh`:
 ```bash
 #!/bin/bash
 
-BRANCHING=$3
+NEW_BRANCH_NAME=$(git symbolic-ref --short HEAD)
 
-if [[ $BRANCHING == '1' ]]; then
-    OLD_BRANCH_NAME=$(git reflog | awk 'NR==1{ print $6; exit }')
-    NEW_BRANCH_NAME=$(git reflog | awk 'NR==1{ print $8; exit }')
+# Don't bother copying the master_branch onto itself.
+if [[ $NEW_BRANCH_NAME=='master_developmet' ]]; then
+    exit 0
+fi
 
-    TARGET_DATABASE=${NEW_BRANCH_NAME}_development
-    TARGET_DATABASE_EXISTS=`psql -qAtX -U postgres -h 0.0.0.0 postgres -c "SELECT COUNT(*) FROM pg_database WHERE datname='${TARGET_DATABASE}';"`
+TARGET_DATABASE=${NEW_BRANCH_NAME}_development
+TARGET_DATABASE_EXISTS=`psql -qAtX -U postgres -h 0.0.0.0 postgres -c "SELECT COUNT(*) FROM pg_database WHERE datname='${TARGET_DATABASE}';"`
 
-    if [[ $TARGET_DATABASE_EXISTS=='0' ]]; then
-        createdb -h 0.0.0.0 -U postgres -T ${OLD_BRANCH_NAME}_development ${TARGET_DATABASE}
-    fi
+if [[ $TARGET_DATABASE_EXISTS=='0' && ]]; then
+    createdb -h 0.0.0.0 -U postgres -T master_development ${TARGET_DATABASE}
 fi
 ``` 
+
+This script will copy the database `master_development` to the current branch so long as the current branch is not
+master.  I have found that copying from `master` seems to work better, rather than copying from the existing branch even
+if I am branching off a development branch.  `master` is always self-consistent, and I can then modify the new
+database to reflect a different structure by using Rails migrations.
 
 Here is the corresponding `drop-dbs-not-on-brach.sh`:
 
@@ -397,7 +403,7 @@ function drop_if_no_branch {
 # any DBs that end in _development or _test.
 for DATABASE in ${DATABASE_ARRAY[@]}; do
     case $DATABASE in
-        postgres | template0 | template1 ) ;;
+        postgres | template0 | template1 | master_development | master_test ) ;;
         *_development) drop_if_no_branch $DATABASE ;;
         *_test) drop_if_no_branch $DATABASE ;;
     esac
