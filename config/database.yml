@@ -7,10 +7,10 @@ default: &default
 
 development:
   <<: *default
-  url: <%= ENV['POSTGRES_URL'] || 'postgres://0.0.0.0/' %>
+  url: <%= ENV['POSTGRES_URL'] || 'postgres://ror-on-docker-db/' %>
   database: <%= "#{`git symbolic-ref --short HEAD`.strip.underscore}_development" %>
 
 test:
   <<: *default
-  url: <%= ENV['POSTGRES_URL'] || 'postgres://0.0.0.0/' %>
+  url: <%= ENV['POSTGRES_URL'] || 'postgres://ror-on-docker-db/' %>
   database: <%= "#{`git symbolic-ref --short HEAD`.strip.underscore}_test" %>

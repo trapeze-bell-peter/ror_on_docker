@@ -2,7 +2,9 @@
 
 There are many good guides on how to setup docker-composer to run `Ruby-on-Rails`. 
 [Here](https://www.firehydrant.io/blog/developing-a-ruby-on-rails-app-with-docker-compose/) is one of the better
-ones.  The most cited reasons for using `docker` and `docker-compose`: ensuring that everyone has a consistent
+ones.
+
+The most cited reasons for using `docker` and `docker-compose`: ensuring that everyone has a consistent
 development environment.  Reasons cited as to why branches could be inconsistent:
 
 1. different run-time environment
@@ -32,16 +34,26 @@ for developers working on the same branch, while allowing us to run different da
 branches.  Because we are still running the application locally, our usual tool chain, particularly in Rubymine, works
 fine with no tweaking.
 
+Another reason for my approach is that I really like using `Rubymine` as my IDE for Ruby.  The latest versions of
+`Rubymine` come with a degree of in-built support for Docker.  While it is certainly possible to run everything
+including the actual Ruby-on-Rails app in Docker, I found that some things just didn't work quite as smoothly in Rubymine
+when running everything in Docker.  In particular, the Debugger had a few quirks.  So running the main app on my
+host while using Docker for other supporting services is a good compromise.
+
 This article and associated Git repository shows how I have started using Docker-compose to have different setups within
 the same development directory structure.  Switching between different development branches, particularly when the
 database schema is evolving is more straightforward.  However, as I explain at to the end of the article its not a
 panacea.
 
+Also note, I have written this article very much in the sequence in which I have developed the solution.  It is worth
+looking at the history in the Git repository, as this captures the intermediate steps more fully than I can capture in
+this article.
+
 # The toy problem
 
-The associated Git repository contains the various files here, together with a toy application that uses the concepts
-described here to run.  In common with Ruby-on-Rails convention (almost over configuration), the toy problem is an
-ultra-simplistic bulletin board.  Users of the bulletin board can:
+The associated Git [repository](https://github.com/trapeze-bell-peter/ror_on_docker) contains the various files here,
+together with a toy application that uses the concepts described here to run.  In common with Ruby-on-Rails convention
+(almost over configuration), the toy problem is an ultra-simplistic bulletin board.  Users of the bulletin board can:
 
 * View, edit and delete users and posts (standard CRUD).
 * Create new posts.  When a user creates a new post, they receive an email thanking them.
@@ -146,7 +158,6 @@ anyway you set environment variables.  Personally, I have set it in my `.bashrc`
 ```bash
 export PGPASSWORD=postgres
 ```
-
 
 For test, it is best to load the schema into the database, but leave the database largely empty:
 
@@ -317,6 +328,32 @@ Rebuild the docker containers with:
 # docker-compose up --build
 ```
 
+# Running the RoR Application
+
+I find it easiest to use the Service tab within Rubymine.  One gotcha I have found is that Docker seems to randomly
+start one of the database Docker containers, not necessarily the one I need.  We can identify whether such a docker
+container is running by runing the command:
+
+```bash
+$ docker ps
+  CONTAINER ID        IMAGE                        COMMAND                  CREATED             STATUS              PORTS                    NAMES
+  5b87a4ce12cf        defreitas/dns-proxy-server   "bash -c /app/dns-pr…"   35 minutes ago      Up About a minute   0.0.0.0:5380->5380/tcp   dns-proxy-server
+  3513ae605973        postgres:latest              "docker-entrypoint.s…"   24 hours ago        Up About a minute   0.0.0.0:5432->5432/tcp   jet_db_1
+```  
+
+This shows that currently I am running a random container.  This can be stopped by issuing the command:
+
+```bash
+$ docker stop jet_db_1
+```
+
+Unlike `docker-compose`, `docker` does not take account of the directory in which the command is issued.  Therefore, I
+tend to use docker directly.  Alternatively, I often use the service tab in Rubymine to start, stop and review current
+status.  Starting the services is slightly different from the standard Rubymine approach as we are not using it to run
+the actual app.  In order, to start the background services, find the `docker-compose.yml` file in Rubymine's Project
+Files window.  Right clicking on this file, brings up a menu in which one option is 'Run docker-compose.yml'.  Selecting
+this, will see Rubymine starting the background services.
+
 # Git hooks
 
 When branching in development, the developer could of course either run `db:create` to create a new database, or
@@ -413,12 +450,82 @@ done
 Both scripts can fail and Git will report if they do.  The main failure mode is if the database we are copying from does
 not exist.
 
+# Making sure each Dev environment has its own distinct containers
+
+One danger with this approach is that what Docker is running is independent of what we are running within the host
+environment.  Therefore, it is possible to run `rails db:create` and create the new database in the wrong container.
+  
+My solution is to use the excellent tool [dns-proxy-server](https://github.com/mageddo/dns-proxy-server).  This allows
+us to lookup hostnames for the key containers as part of the configuration.  By ensuring that hostnames are specific
+to a specific project, it is not possible to create or edit a DB in the wrong context.  As per the documentation, I
+have installed the `dns-proxy-server` as a Docker service:
+
+```bash
+$ docker run --hostname dns.mageddo --name dns-proxy-server -p 5380:5380 \
+  --restart=unless-stopped -d \
+  -v /opt/dns-proxy-server/conf:/app/conf \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /etc/resolv.conf:/etc/resolv.conf \
+  defreitas/dns-proxy-server
+```
+
+We now need to update the docker-compose file.  After a lot of messing around, I found that the solution is actually
+quite straightforward:
+
+```yaml
+services:
+  db:
+    image: postgres:latest
+    hostname: ror-on-docker-db
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: 'postgres'
+      POSTGRES_PASSWORD: 'postgres'
+    volumes:
+      - database_data:/var/lib/postgresql/data
+```
+
+Basically, adding the `hostname:` tag gives us a handle to access the database.  Without `docker-compose` running, the
+hostname should not resolve:
+
+```bash
+$ ping ror-on-docker-db
+ping: ror-on-docker-db: No address associated with hostname
+```
+
+If we now start `docker-compose` then we can check that it is all working:
+
+```bash
+$ docker-compose up
+Starting ror_on_docker_rails-cache_1 ... 
+Starting ror_on_docker_sidekiq-cache_1 ... 
+Starting ror_on_docker_db_1            ... 
+Starting ror_on_docker_mailcatcher_1   ... 
+Starting ror_on_docker_sidekiq_1       ... 
+'Compose: docker-compose.yml' has been deployed successfully.
+$ ping ror-on-docker-db
+PING ror-on-docker-db (172.22.0.4) 56(84) bytes of data.
+64 bytes from 172.22.0.4 (172.22.0.4): icmp_seq=1 ttl=64 time=0.097 ms
+64 bytes from 172.22.0.4 (172.22.0.4): icmp_seq=2 ttl=64 time=0.106 ms
+64 bytes from 172.22.0.4 (172.22.0.4): icmp_seq=3 ttl=64 time=0.045 ms
+``` 
+  
+We need a small change to the database.yml file to use the DNS name:
+
+```yaml
+development:
+  <<: *default
+  url: <%= ENV['POSTGRES_URL'] || 'postgres://ror-on-docker-db/' %>
+  database: <%= "#{`git symbolic-ref --short HEAD`.strip.underscore}_development" %>
+```
+
+This will ensure that if the incorrect container is running, the app won't start correctly. 
+
 # Final thoughts 
 
 Overall, this works well.  I have moved most of my RoR projects on my local machine over to using `docker-compose`.
 
-My biggest gripe is that I can end up with a docker-compose container running in another project and blocking a key
-port.  It would be nice if I could define different subdomains for each project so that does not arise anymore.
-
-I would also love to write a Rails generator that does all this setup automatically.  But that is a bigger undertaking and
-therefore for another day.
+I would also love to write a Rails generator that does all this setup automatically.  But that is a bigger undertaking
+and therefore for another day.

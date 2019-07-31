@@ -3,6 +3,7 @@ version: '3.7'
 services:
   db:
     image: postgres:latest
+    hostname: ror-on-docker-db
     restart: always
     ports:
       - 5432:5432
@@ -17,8 +18,9 @@ services:
       context: .
       dockerfile: sidekiq.dockerfile
     command: bundle exec sidekiq -v
+    hostname: ror-on-docker-sidekiq
     environment:
-      POSTGRES_URL: 'postgres://db/'
+      POSTGRES_URL: 'postgres://ror-on-docker-db/'
       RAILS_CACHE_URL: 'redis://rails-cache:6380/'
     links:
       - db
