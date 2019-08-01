@@ -3,7 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="98acee1d-6d46-4979-80bd-3efc2e856851" name="Default" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/config/environments/development.rb" beforeDir="false" afterPath="$PROJECT_DIR$/config/environments/development.rb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/README.md" afterDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -338,7 +338,7 @@
       <workItem from="1564548262245" duration="3285000" />
       <workItem from="1564551934597" duration="1507000" />
       <workItem from="1564680538083" duration="25000" />
-      <workItem from="1564680581743" duration="938000" />
+      <workItem from="1564680581743" duration="3643000" />
     </task>
     <servers />
   </component>

@@ -29,9 +29,9 @@ new schema to a file, switch branches, fetch the production database, load into 
 and so on.  I could easily loose one to two hours in the switch and switch back.
 
 `docker-compose` gives us a way of having different database instances running on the same development machine.  This
-gives us the best of both world: we can use Rubymine, rvm and bundler to ensure that the Ruby environment is consistent
+gives us the best of both world: we can use rvm and bundler to ensure that the Ruby environment is consistent
 for developers working on the same branch, while allowing us to run different databases associated with different
-branches.  Because we are still running the application locally, our usual tool chain, particularly in Rubymine, works
+branches.  Because we are still running the application locally, our usual tool chain works
 fine with no tweaking.
 
 Another reason for my approach is that I really like using `Rubymine` as my IDE for Ruby.  The latest versions of
@@ -51,9 +51,10 @@ this article.
 
 # The toy problem
 
-The associated Git [repository](https://github.com/trapeze-bell-peter/ror_on_docker) contains the various files here,
-together with a toy application that uses the concepts described here to run.  In common with Ruby-on-Rails convention
-(almost over configuration), the toy problem is an ultra-simplistic bulletin board.  Users of the bulletin board can:
+The associated Git [repository](https://github.com/trapeze-bell-peter/ror_on_docker) contains the various files
+described here, together with a toy application that uses the concepts described here to run.  In common with
+Ruby-on-Rails convention (almost over configuration), the toy problem is an ultra-simplistic bulletin board.  Users of
+the bulletin board can:
 
 * View, edit and delete users and posts (standard CRUD).
 * Create new posts.  When a user creates a new post, they receive an email thanking them.
@@ -134,21 +135,28 @@ _git_branch_name_\_development.
 Once this has been setup, we can use standard rails to create a database:
 
 ```bash
-rails db:create
+$ rails db:create
 ```
 
 This will create an empty database for development and test.  This database does not have any tables in as yet.  For
-development, the best approach is to dump an operational database and import it into your development environment:
+out toy application, simply seed the database:
 
 ```bash
-# psql -U postgres -h 0.0.0.0 app_development < db/expenses.dump
+$ rails db:seed
+```
+
+For real development, the best approach is to dump an operational database and import it into your development
+environment:
+
+```bash
+$ psql -U postgres -h 0.0.0.0 app_development < db/operational.dump
 ```
 
 If you need to look at what is happening inside the database, you can use the following command to launch a SQL
 interactive session:
 
 ```bash
-# psql -U postgres -h 0.0.0.0 app_development
+$ psql -U postgres -h 0.0.0.0 app_development
 ```
 
 This will prompt you for your password which is `postgres` as defined in the `docker-compose.yaml` file. I find it very
@@ -337,7 +345,6 @@ container is running by runing the command:
 ```bash
 $ docker ps
   CONTAINER ID        IMAGE                        COMMAND                  CREATED             STATUS              PORTS                    NAMES
-  5b87a4ce12cf        defreitas/dns-proxy-server   "bash -c /app/dns-pr…"   35 minutes ago      Up About a minute   0.0.0.0:5380->5380/tcp   dns-proxy-server
   3513ae605973        postgres:latest              "docker-entrypoint.s…"   24 hours ago        Up About a minute   0.0.0.0:5432->5432/tcp   jet_db_1
 ```  
 
@@ -453,7 +460,10 @@ not exist.
 # Making sure each Dev environment has its own distinct containers
 
 One danger with this approach is that what Docker is running is independent of what we are running within the host
-environment.  Therefore, it is possible to run `rails db:create` and create the new database in the wrong container.
+environment.  See my previous comment about how Docker seems to start a random container for Postgres sometimes.
+Therefore, it is possible to run `rails db:create` and create the new database in the wrong container.  Likewise, if
+we branch while the wrong Postgres is connected.  Clearly, once we start the Rails app, the issue will become apparent
+as the database schema will not match the Rails app.  But at that point it is too late.
   
 My solution is to use the excellent tool [dns-proxy-server](https://github.com/mageddo/dns-proxy-server).  This allows
 us to lookup hostnames for the key containers as part of the configuration.  By ensuring that hostnames are specific
@@ -527,5 +537,11 @@ This will ensure that if the incorrect container is running, the app won't start
 
 Overall, this works well.  I have moved most of my RoR projects on my local machine over to using `docker-compose`.
 
+However, it does not completely absolve the developer from having a good understanding of Rails, its migrations, and
+how to checkout issues using `psql`.
+
 I would also love to write a Rails generator that does all this setup automatically.  But that is a bigger undertaking
 and therefore for another day.
+
+I would love to hear from others if they find this useful.  If I have made a mistake, please feel free to point this
+out.
